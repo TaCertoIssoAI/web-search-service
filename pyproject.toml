@@ -32,5 +32,8 @@ web-search-cli = "web_search_service.cli:main"
 asyncio_mode = "auto"
 testpaths = ["tests"]
 
+[tool.hatch.build.targets.wheel]
+packages = ["src/web_search_service"]
+
 [tool.ruff]
 line-length = 100
