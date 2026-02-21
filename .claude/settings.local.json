@@ -1,0 +1,31 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "WebFetch(domain:playwright.dev)",
+      "WebFetch(domain:scrapingant.com)",
+      "WebFetch(domain:serpapi.com)",
+      "Bash(pip3:*)",
+      "WebFetch(domain:pypi.org)",
+      "WebFetch(domain:webscraping.ai)",
+      "Bash(uv:*)",
+      "Bash(.venv/bin/playwright install:*)",
+      "Bash(.venv/bin/pytest:*)",
+      "Bash(.venv/bin/python:*)",
+      "Bash(python3:*)",
+      "Bash(python -m pytest tests/ -v)",
+      "WebFetch(domain:camoufox.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:duckduckgo.com)",
+      "WebFetch(domain:roundproxies.com)",
+      "WebFetch(domain:brightdata.com)",
+      "WebFetch(domain:docs.searxng.org)",
+      "WebFetch(domain:html.duckduckgo.com)",
+      "WebFetch(domain:lite.duckduckgo.com)",
+      "WebFetch(domain:deepwiki.com)",
+      "Bash(gh api:*)",
+      "WebFetch(domain:medium.com)",
+      "Bash(python -c \"import playwright; print\\(''playwright available''\\)\")"
+    ]
+  }
+}
