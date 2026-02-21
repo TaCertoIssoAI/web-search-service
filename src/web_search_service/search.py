@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import calendar
 import logging
 import random
+import re
+from datetime import date
 from urllib.parse import urlencode
 
 from playwright.async_api import BrowserContext, Page
@@ -11,10 +14,22 @@ from web_search_service.models import SearchResult
 
 logger = logging.getLogger(__name__)
 
+_SNIPPET_PREFIX_RE = re.compile(
+    r"^(Today|Yesterday|\d+\s+(?:min|mins|minute|minutes|hour|hours|day|days|week|weeks|month|months|year|years)\s+ago)\s*[:\-–—]?\s*",
+    re.IGNORECASE,
+)
+
 SELECTORS = {
     "result_container": "[data-testid='result']",
     "title": "a[data-testid='result-title-a']",
-    "snippet": "[data-testid='result-snippet']",
+    "snippet": [
+        "[data-testid='result-snippet']",
+        ".result__snippet",
+        ".result__snippet.js-result-snippet",
+        "a.result__snippet",
+        "div.result__snippet",
+        "span.result__snippet",
+    ],
     "displayed_url": "a[data-testid='result-extras-url-link'] span",
     "date": "time",
 }
@@ -22,6 +37,32 @@ SELECTORS = {
 
 class SearchError(Exception):
     pass
+
+
+def _sanitize_snippet(snippet: str) -> str:
+    if not snippet:
+        return ""
+    cleaned = _SNIPPET_PREFIX_RE.sub("", snippet).strip()
+    return cleaned
+
+
+def _subtract_months(base: date, months: int) -> date:
+    if months <= 0:
+        return base
+    year = base.year
+    month = base.month - months
+    while month <= 0:
+        month += 12
+        year -= 1
+    last_day = calendar.monthrange(year, month)[1]
+    day = min(base.day, last_day)
+    return date(year, month, day)
+
+
+def _date_filter_last_n_months(months: int) -> str:
+    end = date.today()
+    start = _subtract_months(end, months)
+    return f"{start.isoformat()}..{end.isoformat()}"
 
 
 def build_search_url(
@@ -37,7 +78,7 @@ def build_search_url(
     params = {
         "q": effective_query,
         "kl": "us-en",
-        "df": "d",
+        "df": _date_filter_last_n_months(6),
     }
     url = f"https://duckduckgo.com/?{urlencode(params)}"
     return url, effective_query
@@ -87,11 +128,6 @@ async def _extract_results(page: Page, n_results: int) -> list[SearchResult]:
         if not url:
             continue
 
-        snippet_el = container.locator(SELECTORS["snippet"])
-        snippet = ""
-        if await snippet_el.count() > 0:
-            snippet = (await snippet_el.first.text_content() or "").strip()
-
         cite_el = container.locator(SELECTORS["displayed_url"])
         displayed_url = ""
         if await cite_el.count() > 0:
@@ -101,6 +137,33 @@ async def _extract_results(page: Page, n_results: int) -> list[SearchResult]:
         date = None
         if await date_el.count() > 0:
             date = (await date_el.first.text_content() or "").strip() or None
+
+        snippet = ""
+        for selector in SELECTORS["snippet"]:
+            snippet_el = container.locator(selector)
+            if await snippet_el.count() == 0:
+                continue
+            snippet = (await snippet_el.first.text_content() or "").strip()
+            if not snippet:
+                snippet = (await snippet_el.first.inner_text() or "").strip()
+            if snippet:
+                break
+        if not snippet:
+            # Fallback: pick the longest meaningful text inside the result container.
+            candidate_texts = await container.locator("div, span, p").all_inner_texts()
+            cleaned: list[str] = []
+            for text in candidate_texts:
+                normalized = " ".join(text.split()).strip()
+                if not normalized:
+                    continue
+                if normalized in {title, displayed_url, date or ""}:
+                    continue
+                if normalized.startswith("http"):
+                    continue
+                cleaned.append(normalized)
+            if cleaned:
+                snippet = max(cleaned, key=len)
+        snippet = _sanitize_snippet(snippet)
 
         results.append(
             SearchResult(

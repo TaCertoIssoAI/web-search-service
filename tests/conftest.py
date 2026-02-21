@@ -7,7 +7,7 @@ SAMPLE_SERP_HTML = """\
 <article data-testid="result">
     <a data-testid="result-title-a" href="https://example.com/result1">First Result Title</a>
     <a data-testid="result-extras-url-link" href="https://example.com/result1"><span>example.com</span></a>
-    <div data-testid="result-snippet">This is the first snippet with some text.</div>
+    <div data-testid="result-snippet">Today This is the first snippet with some text.</div>
     <time datetime="2025-01-01T00:00:00Z">2 hours ago</time>
 </article>
 <article data-testid="result">
@@ -18,7 +18,7 @@ SAMPLE_SERP_HTML = """\
 <article data-testid="result">
     <a data-testid="result-title-a" href="https://example.com/result3">Third Result Title</a>
     <a data-testid="result-extras-url-link" href="https://example.com/result3"><span>example.com/page3</span></a>
-    <div data-testid="result-snippet">Third snippet using result-snippet testid.</div>
+    <div class="result__snippet">Third snippet using result__snippet class.</div>
     <time datetime="2025-01-01T00:00:00Z">1 day ago</time>
 </article>
 <article data-testid="result">

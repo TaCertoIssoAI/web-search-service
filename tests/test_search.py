@@ -31,7 +31,8 @@ class TestBuildSearchUrl:
 
     def test_sort_newest_first(self):
         url, _ = build_search_url("news")
-        assert "df=d" in url
+        assert "df=" in url
+        assert "%2E%2E" in url or ".." in url
 
 
 class TestExtractResults:
@@ -85,6 +86,7 @@ class TestExtractResults:
         results = await _extract_results(page, n_results=10)
         await page.close()
         assert "Third snippet" in results[2].snippet
+        assert "result__snippet" in results[2].snippet
 
 
 class TestExecuteSearchCaptcha:
