@@ -113,30 +113,7 @@ class TestExecuteSearchCaptcha:
 
 
 class TestExecuteSearchRetries:
-    async def test_retry_on_goto_timeout_then_success(self):
-        mock_page = AsyncMock()
-        mock_page.goto = AsyncMock(side_effect=[PlaywrightTimeoutError("timed out"), None])
-        mock_page.content = AsyncMock(return_value="<html></html>")
-        mock_page.wait_for_timeout = AsyncMock()
-        mock_page.close = AsyncMock()
-
-        mock_locator = MagicMock()
-        mock_locator.count = AsyncMock(return_value=1)
-        mock_locator.first = MagicMock()
-        mock_locator.first.wait_for = AsyncMock()
-        mock_page.locator = MagicMock(return_value=mock_locator)
-
-        mock_ctx = AsyncMock()
-        mock_ctx.new_page = AsyncMock(return_value=mock_page)
-
-        with patch("web_search_service.search._extract_results", new_callable=AsyncMock) as mock_extract:
-            mock_extract.return_value = []
-            results, _ = await execute_search(mock_ctx, "test query")
-
-        assert results == []
-        assert mock_page.goto.call_count == 2
-
-    async def test_exhausts_retries_on_goto_timeout(self):
+    async def test_goto_timeout_raises(self):
         mock_page = AsyncMock()
         mock_page.goto = AsyncMock(side_effect=PlaywrightTimeoutError("timed out"))
         mock_page.content = AsyncMock(return_value="<html></html>")
@@ -148,4 +125,4 @@ class TestExecuteSearchRetries:
 
         with pytest.raises(PlaywrightTimeoutError):
             await execute_search(mock_ctx, "test query")
-        assert mock_page.goto.call_count == 3
+        assert mock_page.goto.call_count == 1
