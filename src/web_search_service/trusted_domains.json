@@ -1,11 +1,21 @@
 {
     "domains": [
-        "who.int",
-        "cdc.gov",
         "g1.globo.com",
+        "globo.com",
+        "uol.com.br",
+        "estadao.com.br",
+        "folha.uol.com.br",
+        "correiobraziliense.com.br",
+        "cnnbrasil.com.br",
+        "poder360.com.br",
+        "bbc.com",
+        "dw.com",
+        "reuters.com",
+        "apnews.com",
+        "cnn.com",
+        "euronews.com",
+        "afp.com",
         "aosfatos.org",
-        "e-farsas.com",
-        "boatos.org",
-        "projetocomprova.com.br"
+        "e-farsas.com"
     ]
 }
