@@ -28,6 +28,26 @@ Or, directly with Python:
 python -m web_search_service.server
 ```
 
+## Run With Docker
+
+Build the image:
+
+```bash
+docker build -t web-search-service .
+```
+
+Run the container:
+
+```bash
+docker run --rm -p 6050:6050 web-search-service
+```
+
+Verify:
+
+```bash
+curl http://127.0.0.1:6050/health
+```
+
 ## Verify It’s Running
 
 ```bash
