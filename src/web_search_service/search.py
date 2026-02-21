@@ -7,7 +7,7 @@ import re
 from datetime import date
 from urllib.parse import urlencode
 
-from playwright.async_api import BrowserContext, Page
+from playwright.async_api import BrowserContext, Page, TimeoutError as PlaywrightTimeoutError
 
 from web_search_service.config import Settings, settings as default_settings
 from web_search_service.models import SearchResult
@@ -194,36 +194,53 @@ async def execute_search(
         delay = random.uniform(s.min_action_delay, s.max_action_delay)
         await page.wait_for_timeout(delay * 1000)
 
-        await page.goto(url, timeout=s.search_navigation_timeout, wait_until="domcontentloaded")
+        max_attempts = 3
+        nav_timeout = s.search_navigation_timeout
+        for attempt in range(max_attempts):
+            try:
+                await page.goto(url, timeout=nav_timeout, wait_until="domcontentloaded")
 
-        content = await page.content()
-        if _is_captcha(content):
-            resolved = await _wait_for_captcha_resolution(page)
-            if not resolved:
-                raise SearchError("CAPTCHA was not solved in time")
+                content = await page.content()
+                if _is_captcha(content):
+                    resolved = await _wait_for_captcha_resolution(page)
+                    if not resolved:
+                        raise SearchError("CAPTCHA was not solved in time")
 
-        try:
-            await page.locator(SELECTORS["result_container"]).first.wait_for(
-                timeout=s.search_result_wait_timeout,
-            )
-        except Exception:
-            content = await page.content()
-            if _is_captcha(content):
-                resolved = await _wait_for_captcha_resolution(page)
-                if not resolved:
-                    raise SearchError("CAPTCHA was not solved in time")
-                # After solving, wait for results again
                 try:
                     await page.locator(SELECTORS["result_container"]).first.wait_for(
                         timeout=s.search_result_wait_timeout,
                     )
-                except Exception:
-                    return [], effective_query
-            else:
-                return [], effective_query
+                except PlaywrightTimeoutError:
+                    content = await page.content()
+                    if _is_captcha(content):
+                        resolved = await _wait_for_captcha_resolution(page)
+                        if not resolved:
+                            raise SearchError("CAPTCHA was not solved in time")
+                        # After solving, wait for results again
+                        try:
+                            await page.locator(SELECTORS["result_container"]).first.wait_for(
+                                timeout=s.search_result_wait_timeout,
+                            )
+                        except PlaywrightTimeoutError:
+                            raise
+                    else:
+                        raise
 
-        results = await _extract_results(page, n_results)
-        logger.info("Found %d results for query: %s", len(results), query)
-        return results, effective_query
+                results = await _extract_results(page, n_results)
+                logger.info("Found %d results for query: %s", len(results), query)
+                return results, effective_query
+            except PlaywrightTimeoutError:
+                if attempt >= max_attempts - 1:
+                    raise
+                backoff_ms = (attempt + 1) * 1000
+                logger.warning(
+                    "Navigation timed out for query '%s' (attempt %d/%d). Retrying in %dms...",
+                    query,
+                    attempt + 1,
+                    max_attempts,
+                    backoff_ms,
+                )
+                await page.wait_for_timeout(backoff_ms)
+                nav_timeout = int(nav_timeout * 1.5)
     finally:
         await page.close()
