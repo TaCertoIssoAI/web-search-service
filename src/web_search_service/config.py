@@ -4,7 +4,7 @@ from pydantic_settings import BaseSettings
 class Settings(BaseSettings):
     model_config = {"env_prefix": "WS_"}
 
-    browser_pool_size: int = 3
+    browser_pool_size: int = 1
     browser_headless: bool = True
     context_acquire_timeout: float = 30.0
 
