@@ -30,13 +30,13 @@ RUN useradd -m -u 1000 appuser && \
     chown -R appuser:appuser /app
 USER appuser
 
-EXPOSE 6050
+EXPOSE 8080
 
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
-ENV PORT=6050
+ENV PORT=8080
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD curl -f http://localhost:6050/health || exit 1
+    CMD curl -f http://localhost:8080/health || exit 1
 
-CMD ["uvicorn", "web_search_service.server:app", "--host", "0.0.0.0", "--port", "6050", "--workers", "3"]
+CMD ["uvicorn", "web_search_service.server:app", "--host", "0.0.0.0", "--port", "8080", "--workers", "3"]

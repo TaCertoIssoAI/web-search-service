@@ -71,6 +71,42 @@ Optional parameters:
 - `domains` (repeatable): `?domains=example.com&domains=foo.com`
 - `n_results`: `?n_results=5`
 
+## Server Interface
+
+Base URL: `http://127.0.0.1:6050`
+
+Endpoints:
+
+- `GET /health`
+  - Response: JSON with pool stats.
+  - Example:
+    ```json
+    {"status":"ok","pool_size":5,"pool_available":4,"pool_in_use":1}
+    ```
+- `GET /search`
+  - Query params:
+    - `query` (string, required)
+    - `domains` (string, repeatable)
+    - `n_results` (int, 1..50)
+  - Response (shape):
+    ```json
+    {
+      "query": "python",
+      "effective_query": "python",
+      "results": [
+        {
+          "position": 1,
+          "title": "Example Title",
+          "url": "https://example.com",
+          "snippet": "Example snippet",
+          "displayed_url": "example.com",
+          "date": "2 hours ago"
+        }
+      ],
+      "total_results": 1
+    }
+    ```
+
 ## Notes
 
 - The server will open a browser via Playwright/Camoufox.

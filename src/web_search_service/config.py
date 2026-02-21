@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     max_action_delay: float = 2.0
 
     host: str = "0.0.0.0"
-    port: int = 6050
+    port: int = 8080
 
 
 settings = Settings()
