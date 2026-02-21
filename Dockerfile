@@ -10,6 +10,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libxslt-dev \
     libssl-dev \
     libffi-dev \
+    libgtk-3-0 \
+    libdbus-glib-1-2 \
     curl \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
