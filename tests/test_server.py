@@ -63,15 +63,17 @@ class TestSearch:
         ctx_manager.__aexit__ = AsyncMock(return_value=False)
         mock_pool.context.return_value = ctx_manager
 
-        with patch("web_search_service.server.execute_search", new_callable=AsyncMock) as mock_exec:
-            mock_exec.return_value = (mock_results, "test query")
-            resp = await client.get("/search", params={"query": "test"})
+        with patch("web_search_service.server._load_trusted_domains", return_value=[]):
+            with patch("web_search_service.server.execute_search", new_callable=AsyncMock) as mock_exec:
+                mock_exec.return_value = (mock_results, "test query")
+                resp = await client.get("/search", params={"query": "test"})
 
         assert resp.status_code == 200
         data = resp.json()
         assert data["query"] == "test"
         assert len(data["results"]) == 1
         assert data["results"][0]["title"] == "Test Result"
+        assert mock_exec.call_args.kwargs["domains"] == []
 
     async def test_search_missing_query_returns_422(self, client: AsyncClient):
         resp = await client.get("/search")
@@ -100,3 +102,17 @@ class TestSearch:
             resp = await client.get("/search", params={"query": "test"})
 
         assert resp.status_code == 504
+
+    async def test_search_uses_trusted_domains_when_none_provided(self, client: AsyncClient, mock_pool):
+        ctx_manager = AsyncMock()
+        ctx_manager.__aenter__ = AsyncMock(return_value=AsyncMock())
+        ctx_manager.__aexit__ = AsyncMock(return_value=False)
+        mock_pool.context.return_value = ctx_manager
+
+        with patch("web_search_service.server._load_trusted_domains", return_value=["a.com", "b.com"]):
+            with patch("web_search_service.server.execute_search", new_callable=AsyncMock) as mock_exec:
+                mock_exec.return_value = ([], "test query")
+                resp = await client.get("/search", params={"query": "test"})
+
+        assert resp.status_code == 200
+        assert mock_exec.call_args.kwargs["domains"] == ["a.com", "b.com"]

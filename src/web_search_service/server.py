@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import logging
 from contextlib import asynccontextmanager
 from typing import AsyncIterator
@@ -7,6 +8,7 @@ from typing import AsyncIterator
 import uvicorn
 from fastapi import FastAPI, Query
 from fastapi.responses import JSONResponse
+from importlib import resources
 
 from web_search_service.browser_pool import BrowserContextPool
 from web_search_service.config import settings
@@ -27,6 +29,31 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 app = FastAPI(title="Web Search Service", lifespan=lifespan)
 
+_TRUSTED_DOMAINS_CACHE: list[str] | None = None
+
+
+def _load_trusted_domains() -> list[str]:
+    global _TRUSTED_DOMAINS_CACHE
+    if _TRUSTED_DOMAINS_CACHE is not None:
+        return _TRUSTED_DOMAINS_CACHE
+    try:
+        data_path = resources.files("web_search_service").joinpath("trusted_domains.json")
+        raw = data_path.read_text(encoding="utf-8")
+        payload = json.loads(raw)
+        domains = payload.get("domains", [])
+        if not isinstance(domains, list):
+            domains = []
+    except Exception:
+        domains = []
+    _TRUSTED_DOMAINS_CACHE = [d for d in domains if isinstance(d, str) and d.strip()]
+    return _TRUSTED_DOMAINS_CACHE
+
+
+def _effective_domains(user_domains: list[str]) -> list[str]:
+    if user_domains:
+        return user_domains
+    return _load_trusted_domains()
+
 
 @app.get("/search", response_model=SearchResponse, responses={429: {"model": ErrorResponse}, 504: {"model": ErrorResponse}})
 async def search(
@@ -38,7 +65,7 @@ async def search(
     try:
         async with pool.context() as ctx:
             results, effective_query = await execute_search(
-                ctx, query, domains=domains, n_results=n_results
+                ctx, query, domains=_effective_domains(domains), n_results=n_results
             )
         return SearchResponse(
             query=query,
