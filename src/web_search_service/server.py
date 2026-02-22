@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from contextlib import asynccontextmanager
 from typing import AsyncIterator
 
@@ -16,6 +17,8 @@ from web_search_service.models import ErrorResponse, HealthResponse, SearchRespo
 from web_search_service.search import SearchError, execute_search
 
 logger = logging.getLogger(__name__)
+
+_URL_PATTERN = re.compile(r"https?://\S+", re.IGNORECASE)
 
 
 @asynccontextmanager
@@ -55,12 +58,18 @@ def _effective_domains(user_domains: list[str]) -> list[str]:
     return _load_trusted_domains()
 
 
-@app.get("/search", response_model=SearchResponse, responses={429: {"model": ErrorResponse}, 504: {"model": ErrorResponse}})
+@app.get("/search", response_model=SearchResponse, responses={422: {"model": ErrorResponse}, 429: {"model": ErrorResponse}, 504: {"model": ErrorResponse}})
 async def search(
     query: str = Query(..., min_length=1),
     domains: list[str] = Query(default=[]),
     n_results: int = Query(default=settings.default_n_results, ge=1, le=settings.max_n_results),
 ) -> SearchResponse | JSONResponse:
+    if _URL_PATTERN.search(query):
+        return JSONResponse(
+            status_code=422,
+            content={"detail": "Query must not contain URLs"},
+        )
+
     pool: BrowserContextPool = app.state.pool
     try:
         async with pool.context() as ctx:

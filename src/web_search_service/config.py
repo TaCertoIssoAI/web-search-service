@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     max_n_results: int = 50
 
     search_navigation_timeout: int = 30000
-    search_result_wait_timeout: int = 10000
+    search_result_wait_timeout: int = 15000
 
     min_action_delay: float = 0.5
     max_action_delay: float = 2.0

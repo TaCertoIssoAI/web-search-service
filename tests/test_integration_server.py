@@ -165,3 +165,26 @@ class TestServerIntegration:
         data = resp.json()
         for result in data["results"]:
             assert any(result["url"].startswith(f"https://{d}/") for d in allowed)
+
+    @pytest.mark.parametrize(
+        "query",
+        [
+            "https://example.com",
+            "check http://evil.com/payload",
+            "search https://foo.bar/baz?x=1 now",
+        ],
+    )
+    async def test_query_with_url_returns_422(self, running_server, query):
+        base_url, calls, _trusted = running_server
+        calls_before = len(calls)
+        async with httpx.AsyncClient(base_url=base_url) as client:
+            resp = await client.get("/search", params={"query": query})
+        assert resp.status_code == 422
+        assert resp.json()["detail"] == "Query must not contain URLs"
+        assert len(calls) == calls_before, "execute_search should not be called for URL queries"
+
+    async def test_query_without_url_still_works(self, running_server):
+        base_url, calls, _trusted = running_server
+        async with httpx.AsyncClient(base_url=base_url) as client:
+            resp = await client.get("/search", params={"query": "example.com best practices"})
+        assert resp.status_code == 200

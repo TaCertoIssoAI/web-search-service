@@ -79,6 +79,43 @@ class TestSearch:
         resp = await client.get("/search")
         assert resp.status_code == 422
 
+    @pytest.mark.parametrize(
+        "query",
+        [
+            "http://example.com",
+            "https://example.com",
+            "check this https://example.com/page",
+            "HTTP://EXAMPLE.COM",
+            "look at http://foo.bar/baz?q=1",
+        ],
+    )
+    async def test_search_query_with_url_returns_422(self, client: AsyncClient, query: str):
+        resp = await client.get("/search", params={"query": query})
+        assert resp.status_code == 422
+        assert resp.json()["detail"] == "Query must not contain URLs"
+
+    @pytest.mark.parametrize(
+        "query",
+        [
+            "python asyncio tutorial",
+            "example.com best practices",
+            "what is ftp://something",
+            "how to configure host:port",
+        ],
+    )
+    async def test_search_query_without_url_is_allowed(self, client: AsyncClient, mock_pool, query: str):
+        ctx_manager = AsyncMock()
+        ctx_manager.__aenter__ = AsyncMock(return_value=AsyncMock())
+        ctx_manager.__aexit__ = AsyncMock(return_value=False)
+        mock_pool.context.return_value = ctx_manager
+
+        with patch("web_search_service.server._load_trusted_domains", return_value=[]):
+            with patch("web_search_service.server.execute_search", new_callable=AsyncMock) as mock_exec:
+                mock_exec.return_value = ([], query)
+                resp = await client.get("/search", params={"query": query})
+
+        assert resp.status_code == 200
+
     async def test_search_captcha_returns_429(self, client: AsyncClient, mock_pool):
         ctx_manager = AsyncMock()
         ctx_manager.__aenter__ = AsyncMock(return_value=AsyncMock())
