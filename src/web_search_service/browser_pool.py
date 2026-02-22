@@ -54,8 +54,13 @@ class BrowserContextPool:
             )
         except asyncio.TimeoutError:
             raise TimeoutError("Timed out waiting to acquire browser context") from None
+        try:
+            resources = await self._new_browser_and_context()
+        except Exception:
+            self._semaphore.release()
+            raise
         self._total_acquisitions += 1
-        return await self._new_browser_and_context()
+        return resources
 
     async def release(self, resources: tuple, *, healthy: bool = True) -> None:
         pw, browser, ctx = resources

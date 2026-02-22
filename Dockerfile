@@ -22,8 +22,9 @@ COPY src ./src
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir .
 
-# Playwright browsers (Chromium) + system deps
-RUN python -m playwright install --with-deps chromium
+# Camoufox browser (patched Firefox) + system deps
+RUN python -m playwright install --with-deps firefox && \
+    python -m camoufox fetch
 
 # App code
 COPY . .

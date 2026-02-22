@@ -25,7 +25,8 @@
       "WebFetch(domain:deepwiki.com)",
       "Bash(gh api:*)",
       "WebFetch(domain:medium.com)",
-      "Bash(python -c \"import playwright; print\\(''playwright available''\\)\")"
+      "Bash(python -c \"import playwright; print\\(''playwright available''\\)\")",
+      "Bash(python -m pytest:*)"
     ]
   }
 }
