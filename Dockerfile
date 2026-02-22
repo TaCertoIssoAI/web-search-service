@@ -22,8 +22,11 @@ COPY src ./src
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir .
 
+# Use /app/.cache so camoufox assets survive the root→appuser switch
+ENV XDG_CACHE_HOME=/app/.cache
+
 # Camoufox browser (patched Firefox) + system deps
-RUN python -m playwright install --with-deps firefox && \
+RUN python -m playwright install-deps firefox && \
     python -m camoufox fetch
 
 # App code
