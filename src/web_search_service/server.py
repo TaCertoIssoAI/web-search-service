@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import re
@@ -13,6 +14,7 @@ from importlib import resources
 
 from web_search_service.browser_pool import BrowserContextPool
 from web_search_service.config import settings
+from web_search_service.ddgs_search import DdgsSearchError, execute_ddgs_search
 from web_search_service.models import ErrorResponse, HealthResponse, SearchResponse
 from web_search_service.search import SearchError, execute_search
 
@@ -26,6 +28,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     pool = BrowserContextPool()
     await pool.start()
     app.state.pool = pool
+    app.state.ddgs_semaphore = asyncio.Semaphore(settings.ddgs_max_workers)
     yield
     await pool.shutdown()
 
@@ -90,6 +93,42 @@ async def search(
         return JSONResponse(status_code=504, content={"detail": str(exc)})
     except Exception as exc:
         logger.exception("Unexpected error during search")
+        return JSONResponse(status_code=500, content={"detail": str(exc)})
+
+
+@app.get(
+    "/ddgs/search",
+    response_model=SearchResponse,
+    responses={422: {"model": ErrorResponse}, 500: {"model": ErrorResponse}},
+)
+async def ddgs_search(
+    query: str = Query(..., min_length=1),
+    domains: list[str] = Query(default=[]),
+    n_results: int = Query(default=settings.default_n_results, ge=1, le=settings.max_n_results),
+) -> SearchResponse | JSONResponse:
+    if _URL_PATTERN.search(query):
+        return JSONResponse(
+            status_code=422,
+            content={"detail": "Query must not contain URLs"},
+        )
+
+    try:
+        results, effective_query = await execute_ddgs_search(
+            query,
+            domains=_effective_domains(domains),
+            n_results=n_results,
+            semaphore=app.state.ddgs_semaphore,
+        )
+        return SearchResponse(
+            query=query,
+            effective_query=effective_query,
+            results=results,
+            total_results=len(results),
+        )
+    except DdgsSearchError as exc:
+        return JSONResponse(status_code=500, content={"detail": str(exc)})
+    except Exception as exc:
+        logger.exception("Unexpected error during ddgs search")
         return JSONResponse(status_code=500, content={"detail": str(exc)})
 
 
