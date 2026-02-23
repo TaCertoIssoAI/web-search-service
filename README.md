@@ -1,6 +1,6 @@
-# Web Search Service
+# TaCertoIssoAI
 
-FastAPI service that performs DuckDuckGo searches using Playwright/Camoufox and returns structured results.
+**TaCertoIssoAI** is a non-profit project dedicated to combating misinformation and educating Brazilians against fake news. Its use of search libraries (Playwright/Camoufox for browser-based search and `ddgs` for lightweight HTTP-based search) is grounded in this mission — enabling automated verification of claims and retrieval of trustworthy sources to help users distinguish reliable information from disinformation.
 
 ## Requirements
 
@@ -28,6 +28,14 @@ Or, directly with Python:
 python -m web_search_service.server
 ```
 
+## Run the Interactive CLI
+
+```bash
+ddgs-cli
+```
+
+Starts the server in the background and opens a REPL that sends queries to `/ddgs/search`.
+
 ## Run With Docker
 
 Build the image:
@@ -48,7 +56,7 @@ Verify:
 curl http://127.0.0.1:6050/health
 ```
 
-## Verify It’s Running
+## Verify It's Running
 
 ```bash
 curl http://127.0.0.1:6050/health
@@ -62,8 +70,16 @@ Expected response (shape):
 
 ## Example Search
 
+Browser-based search:
+
 ```bash
 curl "http://127.0.0.1:6050/search?query=python"
+```
+
+Lightweight ddgs search (no browser):
+
+```bash
+curl "http://127.0.0.1:6050/ddgs/search?query=python"
 ```
 
 Optional parameters:
@@ -84,6 +100,7 @@ Endpoints:
     {"status":"ok","pool_size":5,"pool_available":4,"pool_in_use":1}
     ```
 - `GET /search`
+  - Browser-based DuckDuckGo search via Playwright + Camoufox.
   - Query params:
     - `query` (string, required)
     - `domains` (string, repeatable)
@@ -106,8 +123,11 @@ Endpoints:
       "total_results": 1
     }
     ```
+- `GET /ddgs/search`
+  - Lightweight DuckDuckGo search via the `ddgs` library (no browser required). Same query params and response shape as `/search`.
 
 ## Notes
 
-- The server will open a browser via Playwright/Camoufox.
-- If DuckDuckGo presents a CAPTCHA, the request will return `429`.
+- The `/search` endpoint opens a browser via Playwright/Camoufox. If DuckDuckGo presents a CAPTCHA, the request will return `429`.
+- The `/ddgs/search` endpoint uses pure HTTP requests — no browser overhead, no CAPTCHA issues.
+- This project is intended for non-commercial, educational, and public-interest use only.
