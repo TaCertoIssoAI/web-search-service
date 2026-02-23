@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     max_action_delay: float = 2.0
 
     ddgs_timeout: int = 10
-    ddgs_max_workers: int = 4
+    ddgs_max_workers: int = 5
 
     host: str = "0.0.0.0"
     port: int = 8080
